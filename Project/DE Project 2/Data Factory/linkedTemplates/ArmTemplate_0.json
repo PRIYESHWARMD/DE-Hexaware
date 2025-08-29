@@ -1,0 +1,585 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": "Data Factory name",
+            "defaultValue": "projectsap"
+        },
+        "AzureDatabricks1_accessToken": {
+            "type": "secureString",
+            "metadata": "Secure string for 'accessToken' of 'AzureDatabricks1'"
+        },
+        "AzureDataLakeStorage1_accountKey": {
+            "type": "secureString",
+            "metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage1'"
+        },
+        "AzureDataLakeStorage2_accountKey": {
+            "type": "secureString",
+            "metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage2'"
+        },
+        "AzureDatabricks1_properties_typeProperties_existingClusterId": {
+            "type": "string",
+            "defaultValue": "0823-061855-w10b4b6q"
+        },
+        "AzureDataLakeStorage1_properties_typeProperties_url": {
+            "type": "string",
+            "defaultValue": "https://projectsamp.dfs.core.windows.net/"
+        },
+        "AzureDataLakeStorage2_properties_typeProperties_url": {
+            "type": "string",
+            "defaultValue": "https://projectsamp.dfs.core.windows.net/"
+        }
+    },
+    "variables": {
+        "factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/AzureDatabricks1')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureDatabricks",
+                "typeProperties": {
+                    "domain": "https://adb-3252900289951065.5.azuredatabricks.net",
+                    "accessToken": {
+                        "type": "SecureString",
+                        "value": "[parameters('AzureDatabricks1_accessToken')]"
+                    },
+                    "existingClusterId": "[parameters('AzureDatabricks1_properties_typeProperties_existingClusterId')]"
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage1')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureBlobFS",
+                "typeProperties": {
+                    "url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]",
+                    "accountKey": {
+                        "type": "SecureString",
+                        "value": "[parameters('AzureDataLakeStorage1_accountKey')]"
+                    }
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage2')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureBlobFS",
+                "typeProperties": {
+                    "url": "[parameters('AzureDataLakeStorage2_properties_typeProperties_url')]",
+                    "accountKey": {
+                        "type": "SecureString",
+                        "value": "[parameters('AzureDataLakeStorage2_accountKey')]"
+                    }
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/pipeline1')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "bronze",
+                        "type": "DatabricksNotebook",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "notebookPath": "/Workspace/Users/azuser4022_mml.local@techademy.com/bronze",
+                            "baseParameters": {
+                                "input": "/mnt/loan/raw/",
+                                "output": "/mnt/loan/bronze/"
+                            }
+                        },
+                        "linkedServiceName": {
+                            "referenceName": "AzureDatabricks1",
+                            "type": "LinkedServiceReference"
+                        }
+                    },
+                    {
+                        "name": "silver",
+                        "type": "DatabricksNotebook",
+                        "dependsOn": [
+                            {
+                                "activity": "bronze",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "notebookPath": "/Workspace/Users/azuser4022_mml.local@techademy.com/silver",
+                            "baseParameters": {
+                                "input": "/mnt/loan/bronze/",
+                                "output": "/mnt/loan/silver/"
+                            }
+                        },
+                        "linkedServiceName": {
+                            "referenceName": "AzureDatabricks1",
+                            "type": "LinkedServiceReference"
+                        }
+                    },
+                    {
+                        "name": "gold",
+                        "type": "DatabricksNotebook",
+                        "dependsOn": [
+                            {
+                                "activity": "silver",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "notebookPath": "/Users/azuser4022_mml.local@techademy.com/gold",
+                            "baseParameters": {
+                                "input": "/mnt/loan/silver/",
+                                "output": "/mnt/loan/gold/"
+                            }
+                        },
+                        "linkedServiceName": {
+                            "referenceName": "AzureDatabricks1",
+                            "type": "LinkedServiceReference"
+                        }
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "annotations": [],
+                "lastPublishTime": "2025-08-25T05:28:00Z"
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/AzureDatabricks1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/SourceDataset_jfz')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureDataLakeStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "Binary",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "fileSystem": "loan"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DestinationDataset_jfz')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureDataLakeStorage2",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "Binary",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "fileSystem": "loandata"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage2')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/silver')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureDataLakeStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": "silver",
+                        "fileSystem": "loan"
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": [
+                    {
+                        "name": "Customer_ID",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Age",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Gender",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Occupation",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Marital_Status",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Family_Size",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Income",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Expenditure",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Use_Frequency",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Loan_Category",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Loan_Amount",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Overdue",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Debt_Record",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Returned_Cheque",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Dishonour_of_Bill",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "source_file",
+                        "type": "UTF8"
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/bronze')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureDataLakeStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": "bronze",
+                        "fileSystem": "loan"
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": [
+                    {
+                        "name": "Customer_ID",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Age",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Gender",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Occupation",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Marital_Status",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Family_Size",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Income",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Expenditure",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Use_Frequency",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Loan_Category",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Loan_Amount",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Overdue",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Debt_Record",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Returned_Cheque",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "Dishonour_of_Bill",
+                        "type": "INT_32"
+                    },
+                    {
+                        "name": "source_file",
+                        "type": "UTF8"
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/gold')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureDataLakeStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": "gold",
+                        "fileSystem": "loan"
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": [
+                    {
+                        "name": "Loan_Category",
+                        "type": "UTF8"
+                    },
+                    {
+                        "name": "Total_Customers",
+                        "type": "INT_64"
+                    },
+                    {
+                        "name": "Total_Loan_Amount",
+                        "type": "INT_64"
+                    },
+                    {
+                        "name": "Avg_Income",
+                        "type": "DOUBLE"
+                    },
+                    {
+                        "name": "Avg_Expenditure",
+                        "type": "DOUBLE"
+                    },
+                    {
+                        "name": "Avg_Overdue_Days",
+                        "type": "DOUBLE"
+                    },
+                    {
+                        "name": "Avg_Debt_Record",
+                        "type": "DOUBLE"
+                    },
+                    {
+                        "name": "Avg_Returned_Cheques",
+                        "type": "DOUBLE"
+                    },
+                    {
+                        "name": "Avg_Dishonour_Bills",
+                        "type": "DOUBLE"
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/raw')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "AzureDataLakeStorage1",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": "raw",
+                        "fileSystem": "loan"
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/CopyPipeline_jfz')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "Copy_jfz",
+                        "type": "Copy",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [
+                            {
+                                "name": "Source",
+                                "value": "loan//"
+                            },
+                            {
+                                "name": "Destination",
+                                "value": "loandata//"
+                            }
+                        ],
+                        "typeProperties": {
+                            "source": {
+                                "type": "BinarySource",
+                                "storeSettings": {
+                                    "type": "AzureBlobFSReadSettings",
+                                    "recursive": true,
+                                    "wildcardFileName": "*"
+                                },
+                                "formatSettings": {
+                                    "type": "BinaryReadSettings"
+                                }
+                            },
+                            "sink": {
+                                "type": "BinarySink",
+                                "storeSettings": {
+                                    "type": "AzureBlobFSWriteSettings"
+                                }
+                            },
+                            "enableStaging": false,
+                            "enableSkipIncompatibleRow": false,
+                            "skipErrorFile": {
+                                "fileMissing": true
+                            },
+                            "validateDataConsistency": false
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "SourceDataset_jfz",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "DestinationDataset_jfz",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ]
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "annotations": [],
+                "lastPublishTime": "2025-08-23T09:38:24Z"
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/datasets/SourceDataset_jfz')]",
+                "[concat(variables('factoryId'), '/datasets/DestinationDataset_jfz')]"
+            ]
+        }
+    ]
+}

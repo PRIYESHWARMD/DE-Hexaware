@@ -1,0 +1,33 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "value": "projectsap"
+        },
+        "AzureDatabricks1_accessToken": {
+            "value": ""
+        },
+        "AzureDataLakeStorage1_accountKey": {
+            "value": ""
+        },
+        "AzureDataLakeStorage2_accountKey": {
+            "value": ""
+        },
+        "AzureDatabricks1_properties_typeProperties_existingClusterId": {
+            "value": "0823-061855-w10b4b6q"
+        },
+        "AzureDataLakeStorage1_properties_typeProperties_url": {
+            "value": "https://projectsamp.dfs.core.windows.net/"
+        },
+        "AzureDataLakeStorage2_properties_typeProperties_url": {
+            "value": "https://projectsamp.dfs.core.windows.net/"
+        },
+        "containerUri": {
+            "value": ""
+        },
+        "containerSasToken": {
+            "value": ""
+        }
+    }
+}

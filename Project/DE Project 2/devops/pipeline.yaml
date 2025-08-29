@@ -1,0 +1,72 @@
+trigger:
+- none  # Manual trigger
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  DATABRICKS_HOST: $(DATABRICKS_HOST)   # Secret variable
+  DATABRICKS_TOKEN: $(DATABRICKS_TOKEN) # Secret variable
+
+steps:
+- checkout: self
+
+# Step 1: Verify Python and install Databricks CLI
+- script: |
+    echo "Checking Python version..."
+    python3 --version
+    python3 -m pip install --upgrade pip
+    python3 -m pip install databricks-cli
+  displayName: "Verify Python & Install Databricks CLI"
+
+# Step 2: Deploy Mount Notebook
+- script: |
+    echo "Deploying Mount Notebook to Databricks..."
+    databricks workspace import \
+      --language PYTHON \
+      --overwrite \
+      notebooks/mount.py \
+      /Workspace/Users/azuser4022_mml.local@techademy.com/mount
+  env:
+    DATABRICKS_HOST: $(DATABRICKS_HOST)
+    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+  displayName: "Deploy Mount Notebook"
+
+# Step 3: Deploy Bronze Notebook
+- script: |
+    echo "Deploying Bronze Notebook to Databricks..."
+    databricks workspace import \
+      --language PYTHON \
+      --overwrite \
+      notebooks/bronze.py \
+      /Workspace/Users/azuser4022_mml.local@techademy.com/bronze
+  env:
+    DATABRICKS_HOST: $(DATABRICKS_HOST)
+    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+  displayName: "Deploy Bronze Notebook"
+
+# Step 4: Deploy Silver Notebook
+- script: |
+    echo "Deploying Silver Notebook to Databricks..."
+    databricks workspace import \
+      --language PYTHON \
+      --overwrite \
+      notebooks/silver.py \
+      /Workspace/Users/azuser4022_mml.local@techademy.com/silver
+  env:
+    DATABRICKS_HOST: $(DATABRICKS_HOST)
+    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+  displayName: "Deploy Silver Notebook"
+
+# Step 5: Deploy Gold Notebook
+- script: |
+    echo "Deploying Gold Notebook to Databricks..."
+    databricks workspace import \
+      --language PYTHON \
+      --overwrite \
+      notebooks/gold.py \
+      /Workspace/Users/azuser4022_mml.local@techademy.com/gold
+  env:
+    DATABRICKS_HOST: $(DATABRICKS_HOST)
+    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+  displayName: "Deploy Gold Notebook"
